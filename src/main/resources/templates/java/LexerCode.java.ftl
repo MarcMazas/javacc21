@@ -285,12 +285,6 @@
 [@nfa.OutputNfaStateMoves/]
 
 [#list lexerData.lexicalStates as lexicalState]
-  [#if lexicalState.nfaData.dumpNfaStarts]
-  [@nfa.DumpNfaStartStatesCode lexicalState/]
-  [/#if]
-  [#if lexicalState.createStartNfa]
-     [@nfa.DumpStartWithStates lexicalState/]
-  [/#if]
    [@dfa.DumpDfaCode lexicalState/]
    [@nfa.DumpMoveNfa lexicalState/]
 [/#list]

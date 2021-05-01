@@ -51,7 +51,6 @@ public class LexicalStateData {
     private Map<String, RegularExpression> caseSensitiveTokenTable = new HashMap<>();
     private Map<String, RegularExpression> caseInsensitiveTokenTable = new HashMap<>();
 
-    private final boolean mixedCase=true;
     private HashSet<RegularExpression> regularExpressions = new HashSet<>();
 
     public LexicalStateData(Grammar grammar, String name) {
@@ -101,10 +100,6 @@ public class LexicalStateData {
         return nfaData.indexedAllStates.size();
     }
 
-    public boolean isMixedCase() {
-        return mixedCase;
-    }
-
     public boolean getCreateStartNfa() {
         return false;
 //        return !mixedCase && !nfaData.indexedAllStates.isEmpty();
@@ -143,11 +138,7 @@ public class LexicalStateData {
     }
 
     List<RegexpChoice> processTokenProduction(TokenProduction tp, boolean isFirst) {
-        boolean ignoring = false;
         boolean ignore = tp.isIgnoreCase() || grammar.isIgnoreCase();//REVISIT
-        if (isFirst) {
-            ignoring = ignore;
-        }
         List<RegexpChoice> choices = new ArrayList<>();
         for (RegexpSpec respec : tp.getRegexpSpecs()) {
             RegularExpression currentRegexp = respec.getRegexp();
@@ -159,9 +150,6 @@ public class LexicalStateData {
             if (currentRegexp instanceof RegexpStringLiteral
                     && !((RegexpStringLiteral) currentRegexp).getImage().equals("")) {
                 dfaData.generate((RegexpStringLiteral) currentRegexp);
-//                if (!isFirst && ignoring != ignore) {
-//                    mixedCase = true;
-//                }
             } else {
                 if (currentRegexp instanceof RegexpChoice) {
                     choices.add((RegexpChoice) currentRegexp);

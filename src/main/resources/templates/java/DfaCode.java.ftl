@@ -85,19 +85,7 @@
            [/#if]
          [/#list]
          [/@ArgsList] == 0L)
-         [#if !lexicalState.mixedCase&&hasNfa]
-            return jjStartNfa_${lexicalState.name}
-            [@ArgsList]
-               ${table_index-2}
-               [#list 0..maxStringIndex/64 as j]
-                 [#if table_index<=dfaData.maxStringLengthForActive[j]+1]
-                   old${j}
-                 [#else]
-                   0L
-                 [/#if]
-               [/#list]
-            [/@ArgsList];
-         [#elseif hasNfa]
+         [#if hasNfa]
             return jjMoveNfa_${lexicalState.name}(${initState}, ${table_index-1});
          [#else]
             return ${table_index};
@@ -108,21 +96,7 @@
            curChar = retval;
        }
        else  {
-         [#if !lexicalState.mixedCase&&hasNfa]
-           jjStopStringLiteralDfa_${lexicalState.name}[@ArgsList]
-              ${table_index-1}
-           [#list 0..maxStringIndex/64 as k]
-              [#if (table_index<=maxStringLengthForActive[k])]
-                active${k}
-              [#else]
-                0L
-              [/#if]
-           [/#list][/@ArgsList];
-          if (trace_enabled && jjmatchedKind != 0 && jjmatchedKind != 0x7fffffff) {
-             LOGGER.info("    Currently matched the first " + (jjmatchedPos + 1) + " characters as a " + tokenImage[jjmatchedKind] + " token. ");
-          }
-           return ${table_index};
-         [#elseif hasNfa]
+         [#if hasNfa]
            return jjMoveNfa_${lexicalState.name}(${initState}, ${table_index-1}); 
          [#else]
            return ${table_index};
@@ -199,7 +173,7 @@
 	              [/#list]
 	           [/@ArgsList];
 	      [#else][#-- a very special case--]
-	        [#if table_index = 0&&lexicalState.mixedCase]
+	        [#if table_index = 0]
 	           [#if hasNfa]
 	           return jjMoveNfa_${lexicalState.name}(${initState}, 0);
 	           [#else]
@@ -229,22 +203,7 @@
       }
     [#if table_index != 0]
        [#if startNfaNeeded]
-          [#if !lexicalState.mixedCase&&hasNfa]
-            [#-- Here a string literal is successfully matched and no
-                 more string literals are possible. So set the kind and t
-                 state set up to and including this position for the matched
-                 string. --]
-            return jjStartNfa_${lexicalState.name}[@ArgsList]
-               ${table_index-1}
-               [#list 0..maxStringIndex/64 as k]
-                 [#if table_index<=maxStringLengthForActive[k]]
-                  active${k}
-                 [#else]
-                   0L
-                 [/#if]
-               [/#list]
-            [/@ArgsList];
-          [#elseif hasNfa]
+          [#if hasNfa]
              return jjMoveNfa_${lexicalState.name}(${initState}, ${table_index});
           [#else]
              return ${table_index+1};

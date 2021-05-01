@@ -160,18 +160,6 @@ public class DfaData {
         return true;
     }
 
-    final int getStrKind(String str) {
-        int maxStringIndex = lexicalState.getMaxStringIndex();
-        for (int i = 0; i < maxStringIndex; i++) {
-            RegularExpression re = grammar.getLexerData().getRegularExpression(i);
-            if (lexicalState.containsRegularExpression(re)) {
-                if (re.getImage() != null && re.getImage().equals(str))
-                    return i;
-            }
-        }
-        return Integer.MAX_VALUE;
-    }
-
     void fillSubString() {
         int maxStringIndex = lexicalState.getMaxStringIndex();
         for (int i = 0; i < maxStringIndex; i++) {
