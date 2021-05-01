@@ -38,11 +38,6 @@
 
 [#var MAX_INT=2147483647]
 
-   private int[] jjemptyLineNo = new int[${numLexicalStates}];
-   private int[] jjemptyColNo = new int[${numLexicalStates}];
-   private boolean[] jjbeenHere = new boolean[${numLexicalStates}];
-  
-  
   private int jjmatchedPos;
   //FIXME,should be an enum.
   private int jjmatchedKind;

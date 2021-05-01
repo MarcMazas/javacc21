@@ -71,7 +71,7 @@ public class LexicalStateData {
     // terminated. (Accepting state in the Aho et al. terminology)
     private List<Map<Integer, KindInfo>> stringLiteralTables = new ArrayList<>();
 
-    public LexicalStateData(Grammar grammar, String name) {
+    LexicalStateData(Grammar grammar, String name) {
         this.grammar = grammar;
         this.lexerData = grammar.getLexerData();
         this.name = name;
@@ -178,7 +178,7 @@ public class LexicalStateData {
         return choices;
     }
 
-    void generateDfaData() {
+    private void generateDfaData() {
         fillSubString();
         for (int i = 0; i < getMaxStringLength(); i++) {
             Map<Integer, KindInfo> table = getStringLiteralTables().get(i);
@@ -188,7 +188,7 @@ public class LexicalStateData {
         }
     }
 
-    List<RegexpChoice> processTokenProduction(TokenProduction tp, boolean isFirst) {
+    private List<RegexpChoice> processTokenProduction(TokenProduction tp, boolean isFirst) {
         boolean ignore = tp.isIgnoreCase() || grammar.isIgnoreCase();//REVISIT
         List<RegexpChoice> choices = new ArrayList<>();
         for (RegexpSpec respec : tp.getRegexpSpecs()) {
@@ -247,7 +247,7 @@ public class LexicalStateData {
     }
 
 
-    void generateNfaData() {
+    private void generateNfaData() {
         for (NfaState state : allStates) {
             state.doEpsilonClosure();
         }
@@ -263,7 +263,7 @@ public class LexicalStateData {
         allStates.removeIf(state->state.getIndex()==-1);
     }
 
-    boolean canStartNfaUsing(int c) {
+    private boolean canStartNfaUsing(int c) {
         return initialState.epsilonMoves.stream().anyMatch(state->state.canMoveUsingChar(c));
     }
 
@@ -322,7 +322,7 @@ public class LexicalStateData {
         return result;
     }
 
-    void fillSubString() {
+    private void fillSubString() {
         int maxStringIndex = getMaxStringIndex();
         for (int i = 0; i < maxStringIndex; i++) {
             RegularExpression re = grammar.getLexerData().getRegularExpression(i);
@@ -363,7 +363,7 @@ public class LexicalStateData {
         return true;
     }
 
-    void generate(final RegexpStringLiteral rsLiteral) {
+    private void generate(final RegexpStringLiteral rsLiteral) {
         final int ordinal = rsLiteral.getOrdinal();
         final String stringLiteral = rsLiteral.getImage();
         final int stringLength = stringLiteral.length();
