@@ -100,11 +100,6 @@ public class LexicalStateData {
         return nfaData.indexedAllStates.size();
     }
 
-    public boolean getCreateStartNfa() {
-        return false;
-//        return !mixedCase && !nfaData.indexedAllStates.isEmpty();
-    }
-
     public boolean containsRegularExpression(RegularExpression re) {
         return regularExpressions.contains(re);
     }
