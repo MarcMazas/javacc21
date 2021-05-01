@@ -68,7 +68,6 @@
     [#var needNextStep = false]
 
    [#list lexerData.lexicalStates as lexicalState]
-       public static int moveCallCount_${lexicalState.name};
        [#list lexicalState.nfaData.allStates as nfaState]
           [#if nfaState.moveRanges?size < 16]  
             private static final boolean ${nfaState.moveMethodName}(int ch) {
@@ -126,7 +125,6 @@
 [#macro DumpMoveNfa lexicalState]
   [#var hasNfa = lexicalState.numNfaStates>0]
     private int jjMoveNfa_${lexicalState.name}(int startState, int curPos) {
-       ++moveCallCount_${lexicalState.name};
     [#if !hasNfa]
         return curPos;
     }
@@ -259,29 +257,3 @@
    [/#if]
        break;
 [/#macro]
-[#--
-[#macro DumpStartWithStates lexicalState]
-    private int jjStartNfaWithStates_${lexicalState.name}(int pos, int kind, int state) {
-        jjmatchedKind = kind;
-        jjmatchedPos = pos;
-        if (trace_enabled) LOGGER.info("   No more string literal token matches are possible.");
-        if (trace_enabled) LOGGER.info("   Currently matched the first " + (jjmatchedPos + 1) + " characters as a " + tokenImage[jjmatchedKind] + " token.");
-         int retval = input_stream.readChar();
-       if (retval >=0) {
-           curChar = retval;
-       } 
-       else  { 
-            return pos + 1; 
-        }
-        if (trace_enabled) LOGGER.info("" + 
-     [#if multipleLexicalStates]
-            "<${lexicalState.name}>"+  
-     [/#if]
-            [#-- REVISIT --
-            "Current character : " + addEscapes(String.valueOf(curChar)) 
-            + " (" + curChar + ") " + "at line " + input_stream.getEndLine() 
-            + " column " + input_stream.getEndColumn());
-        return jjMoveNfa_${lexicalState.name}(state, pos+1);
-   }
-[/#macro]
---]

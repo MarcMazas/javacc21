@@ -86,14 +86,6 @@ public class DfaData {
         return result;
     }
 
-    public boolean getSubString(int i) {
-        return subStringSet.get(i);
-    }
-
-    public boolean getSubStringAtPos(int i) {
-        return subStringAtPosSet.get(i);
-    }
-
     void generate(final RegexpStringLiteral rsLiteral) {
         final int ordinal = rsLiteral.getOrdinal();
         final String stringLiteral = rsLiteral.getImage();

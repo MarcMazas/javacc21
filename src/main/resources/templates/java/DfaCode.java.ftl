@@ -141,22 +141,13 @@
                  [#if table_index != 0]
                    ((active${(kind/64)?int} & ${utils.powerOfTwoInHex(kind%64)}) != 0L) 
                  [/#if]
-                 [#if !dfaData.subString[kind]]
-                    [#var stateSetIndex=lexicalState.nfaData.getStateSetForKind(table_index, kind)]
-                    [#if stateSetIndex != -1]
-                    return jjStartNfaWithStates_${lexicalState.name}(${table_index}, ${kind}, ${stateSetIndex});
-                    [#else]
-                    return jjStopAtPos(${table_index}, ${kind});
-                    [/#if]
-                 [#else]
-                    [#if table_index != 0]
-                     {
+                 [#if table_index != 0]
+                    {
                     jjmatchedKind = ${kind};
                     jjmatchedPos = ${table_index};
                     }
                     [#else]
                     jjmatchedKind = ${kind};
-                    [/#if]
                  [/#if]
               [/#if]
 	        [/#list]
