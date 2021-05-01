@@ -180,27 +180,8 @@ public class DfaData {
             if (re.getImage() == null || !lexicalState.containsRegularExpression(re)) {
                 continue;
             }
-            if (lexicalState.isMixedCase()) {
-                // We will not optimize for mixed case
-                subStringSet.set(i);
-                subStringAtPosSet.set(re.getImage().length() - 1);
-                continue;
-            }
-            for (int j = 0; j < maxStringIndex; j++) {
-                RegularExpression re2 = grammar.getLexerData().getRegularExpression(j);
-                if (j != i && lexicalState.containsRegularExpression(re2) && re2.getImage() != null) {
-                    if (re2.getImage().indexOf(re.getImage()) == 0) {
-                        subStringSet.set(i);
-                        subStringAtPosSet.set(re.getImage().length() - 1);
-                        break;
-                    } else if (grammar.isIgnoreCase()//REVISIT
-                            && re2.getImage().toLowerCase().startsWith(re.getImage().toLowerCase())) {
-                        subStringSet.set(i);
-                        subStringAtPosSet.set(re.getImage().length() - 1);
-                        break;
-                    }
-                }
-            }
+            subStringSet.set(i);
+            subStringAtPosSet.set(re.getImage().length() - 1);
         }
     }
 

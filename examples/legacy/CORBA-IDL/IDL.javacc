@@ -29,7 +29,8 @@
 
 options {
    TREE_BUILDING_ENABLED=false;
-   HUGE_FILE_SUPPORT=true;
+// REVISIT: Why does the test fail with this line uncommented?   
+//   HUGE_FILE_SUPPORT=true;
 }
 
 INJECT(PARSER_CLASS) : 

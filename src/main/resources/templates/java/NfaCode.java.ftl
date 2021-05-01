@@ -68,6 +68,7 @@
     [#var needNextStep = false]
 
    [#list lexerData.lexicalStates as lexicalState]
+       public static int moveCallCount_${lexicalState.name};
        [#list lexicalState.nfaData.allStates as nfaState]
           [#if nfaState.moveRanges?size < 16]  
             private static final boolean ${nfaState.moveMethodName}(int ch) {
@@ -125,6 +126,7 @@
 [#macro DumpMoveNfa lexicalState]
   [#var hasNfa = lexicalState.numNfaStates>0]
     private int jjMoveNfa_${lexicalState.name}(int startState, int curPos) {
+       ++moveCallCount_${lexicalState.name};
     [#if !hasNfa]
         return curPos;
     }
@@ -195,7 +197,7 @@
         }
         int toRet = Math.max(curPos, seenUpto);
         if (curPos < toRet) {
-           for (i = toRet - Math.min(curPos, seenUpto); i-- >0;) {
+           for (int i = toRet - Math.min(curPos, seenUpto); i-- >0;) {
                    curChar = input_stream.readChar(); // REVISIT, not handling error return code
            }
         }
@@ -270,7 +272,7 @@
        break;
 [/#macro]
 
-[#macro DumpNfaStartStatesCode lexicalState lexicalState_index]
+[#macro DumpNfaStartStatesCode lexicalState]
   [#var dfaData = lexicalState.dfaData] 
   [#var stateSetForPos = lexicalState.nfaData.stateSetForPos]
   [#var maxKindsReqd=(1+lexicalState.maxStringIndex/64)?int]

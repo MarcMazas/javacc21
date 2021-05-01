@@ -93,9 +93,9 @@ public class NfaData {
             else if (lexerData.getMoreSet().get(initialOrdinal))
                 lexerData.hasMoreActions = true;
         }
-        if (indexedAllStates.size() != 0 && !lexicalState.isMixedCase()) {
-            generateNfaStartStates();
-        }
+//        if (indexedAllStates.size() != 0 && !lexicalState.isMixedCase()) {
+//            generateNfaStartStates();
+//        }
         allStates.removeIf(state->state.getIndex()==-1);
     }
 
@@ -166,7 +166,7 @@ public class NfaData {
     }
 
 //What a total Rube Goldberg contraption!
-    void generateNfaStartStates() {
+    private void generateNfaStartStates() {
         String stateSetString = "";
         List<NfaState> newStates = new ArrayList<>();
         while(stateSetForPos.size() < lexicalState.getMaxStringLength()) {

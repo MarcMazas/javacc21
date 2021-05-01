@@ -51,7 +51,7 @@ public class LexicalStateData {
     private Map<String, RegularExpression> caseSensitiveTokenTable = new HashMap<>();
     private Map<String, RegularExpression> caseInsensitiveTokenTable = new HashMap<>();
 
-    private boolean mixedCase;
+    private final boolean mixedCase=true;
     private HashSet<RegularExpression> regularExpressions = new HashSet<>();
 
     public LexicalStateData(Grammar grammar, String name) {
@@ -101,13 +101,13 @@ public class LexicalStateData {
         return nfaData.indexedAllStates.size();
     }
 
-    // FIXME! There is currently no testing in place for mixed case Lexical states!
     public boolean isMixedCase() {
         return mixedCase;
     }
 
     public boolean getCreateStartNfa() {
-        return !mixedCase && !nfaData.indexedAllStates.isEmpty();
+        return false;
+//        return !mixedCase && !nfaData.indexedAllStates.isEmpty();
     }
 
     public boolean containsRegularExpression(RegularExpression re) {
@@ -159,9 +159,9 @@ public class LexicalStateData {
             if (currentRegexp instanceof RegexpStringLiteral
                     && !((RegexpStringLiteral) currentRegexp).getImage().equals("")) {
                 dfaData.generate((RegexpStringLiteral) currentRegexp);
-                if (!isFirst && ignoring != ignore) {
-                    mixedCase = true;
-                }
+//                if (!isFirst && ignoring != ignore) {
+//                    mixedCase = true;
+//                }
             } else {
                 if (currentRegexp instanceof RegexpChoice) {
                     choices.add((RegexpChoice) currentRegexp);

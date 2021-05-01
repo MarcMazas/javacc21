@@ -286,7 +286,7 @@
 
 [#list lexerData.lexicalStates as lexicalState]
   [#if lexicalState.nfaData.dumpNfaStarts]
-  [@nfa.DumpNfaStartStatesCode lexicalState, lexicalState_index/]
+  [@nfa.DumpNfaStartStatesCode lexicalState/]
   [/#if]
   [#if lexicalState.createStartNfa]
      [@nfa.DumpStartWithStates lexicalState/]
