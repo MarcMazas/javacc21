@@ -45,8 +45,13 @@ public class LexicalStateData {
     private LexerData lexerData;
     private String name;
     private DfaData dfaData;
-    private NfaData nfaData;
+    private NfaState initialState;  
 
+    Map<Integer, NfaState> indexedAllStates = new HashMap<>();
+    Set<NfaState> allStates = new HashSet<>();
+    private Set<Set<NfaState>> allCompositeStateSets = new HashSet<>();
+    private int dummyStateIndex = -1;
+    private Map<Set<NfaState>, Integer> stateIndexFromStateSet = new HashMap<>();
     private List<TokenProduction> tokenProductions = new ArrayList<>();
     private Map<String, RegularExpression> caseSensitiveTokenTable = new HashMap<>();
     private Map<String, RegularExpression> caseInsensitiveTokenTable = new HashMap<>();
@@ -57,22 +62,31 @@ public class LexicalStateData {
         this.grammar = grammar;
         this.lexerData = grammar.getLexerData();
         this.dfaData = new DfaData(this);
-        this.nfaData = new NfaData(this);
         this.name = name;
-        nfaData.initialState = new NfaState(this);
+        this.initialState = new NfaState(this);
     }
 
     Grammar getGrammar() {
         return grammar;
     }
    
-    NfaState getInitialState() {return nfaData.initialState;}
+    NfaState getInitialState() {return initialState;}
 
     public String getName() {return name;}
 
     public DfaData getDfaData() {return dfaData;}
 
-    public NfaData getNfaData() {return nfaData;}
+    public int getInitialStateIndex() {
+        return getStartStateIndex(initialState.epsilonMoves);
+    }
+
+    public Collection<NfaState> getAllStates() {
+        return indexedAllStates.values();
+    }
+
+    public Set<Set<NfaState>> getAllCompositeStateSets() {
+        return allCompositeStateSets;
+    }
 
     public int getMaxStringLength() {
         int result = 0;
@@ -97,7 +111,7 @@ public class LexicalStateData {
     }
 
     public int getNumNfaStates() {
-        return nfaData.indexedAllStates.size();
+        return indexedAllStates.size();
     }
 
     public boolean containsRegularExpression(RegularExpression re) {
@@ -128,7 +142,7 @@ public class LexicalStateData {
             isFirst = false;
         }
         dfaData.generateData();
-        nfaData.generateData();
+        generateData();
         return choices;
     }
 
@@ -188,5 +202,81 @@ public class LexicalStateData {
             }
         }
         return choices;
+    }
+
+
+    void generateData() {
+        for (NfaState state : allStates) {
+            state.doEpsilonClosure();
+        }
+        initialState.generateCode();
+        int initialOrdinal = initialState.getType() == null ? -1 : initialState.getType().getOrdinal();
+        if (initialState.getType() != null && initialOrdinal != 0) {
+            if (lexerData.getSkipSet().get(initialOrdinal)
+                || (lexerData.getSpecialSet().get(initialOrdinal)))
+                lexerData.hasSkipActions = true;
+            else if (lexerData.getMoreSet().get(initialOrdinal))
+                lexerData.hasMoreActions = true;
+        }
+        allStates.removeIf(state->state.getIndex()==-1);
+    }
+
+    boolean canStartNfaUsing(int c) {
+        return initialState.epsilonMoves.stream().anyMatch(state->state.canMoveUsingChar(c));
+    }
+
+    public int getStartStateIndex(String stateSetString) {
+        return getStartStateIndex(stateSetFromString(stateSetString));
+    }
+
+    public int getStartStateIndex(Set<NfaState> states) {
+        if (states.isEmpty()) return -1;
+        if (stateIndexFromStateSet.containsKey(states)) {
+            return stateIndexFromStateSet.get(states);
+        }
+        List<Integer> nameSet = new ArrayList<>();
+        for (NfaState state : states) nameSet.add(state.getIndex());
+        if (nameSet.size() == 1) {
+            stateIndexFromStateSet.put(states, nameSet.get(0));
+            return nameSet.get(0);
+        }
+        if (dummyStateIndex == -1) {
+            dummyStateIndex = indexedAllStates.size();
+        } else {
+            ++dummyStateIndex;
+        }
+        stateIndexFromStateSet.put(states, dummyStateIndex);
+        allCompositeStateSets.add(states);
+        return dummyStateIndex;
+    }
+
+    private Set<NfaState> stateSetFromString(String stateSetString) {
+        Set<NfaState> result = new HashSet<>();
+        List<Integer> indexes = epsilonMovesStringToIntArray(stateSetString);
+        for (int index : indexes) {
+            NfaState state = indexedAllStates.get(index);
+            result.add(state);
+        }
+        return result;
+    }    
+
+    static private List<Integer> epsilonMovesStringToIntArray(String s) {
+        List<Integer> result = new ArrayList<>();
+        StringTokenizer st = new StringTokenizer(s, "{},;null", false);
+        while (st.hasMoreTokens()) {
+            result.add(Integer.valueOf(st.nextToken()));
+        }
+        return result;
+    }
+
+    public int getStartIndex(NfaState state) {
+        Integer result = lexerData.getTableToDump().get(state.epsilonMoves);
+        if (result == null) {
+            result = lexerData.lastIndex;
+            lexerData.lastIndex += state.getEpsilonMoveCount();
+            lexerData.getTableToDump().put(state.epsilonMoves, result);
+            lexerData.getOrderedStateSets().add(state.epsilonMoves);
+        }
+        return result;
     }
 }

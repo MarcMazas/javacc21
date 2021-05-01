@@ -68,7 +68,7 @@
     [#var needNextStep = false]
 
    [#list lexerData.lexicalStates as lexicalState]
-       [#list lexicalState.nfaData.allStates as nfaState]
+       [#list lexicalState.allStates as nfaState]
           [#if nfaState.moveRanges?size < 16]  
             private static final boolean ${nfaState.moveMethodName}(int ch) {
                [#var left, right]
@@ -112,7 +112,7 @@
      [#if needNextStep]
      static {
        [#list lexerData.lexicalStates as lexicalState]
-        [#list lexicalState.nfaData.allStates as nfaState]
+        [#list lexicalState.allStates as nfaState]
           [#if nfaState.moveRanges?size >= 16]
             ${nfaState.movesArrayName}_populate();
           [/#if]
@@ -200,15 +200,15 @@
 [/#macro]
 
 [#macro DumpMoves lexicalState]
-   [#list lexicalState.nfaData.allCompositeStateSets as stateSet]
-       [#var stateIndex=lexicalState.nfaData.getStartStateIndex(stateSet)]
+   [#list lexicalState.allCompositeStateSets as stateSet]
+       [#var stateIndex=lexicalState.getStartStateIndex(stateSet)]
        case ${stateIndex} :
         [#list stateSet as state]
              [@DumpMoveForCompositeState state/]
         [/#list]
           break;
    [/#list]
-   [#list lexicalState.nfaData.allStates as state]
+   [#list lexicalState.allStates as state]
        case ${state.index} :
          [@DumpMove state /]
    [/#list]
@@ -226,7 +226,7 @@
        [#-- Note that the getStartIndex() method builds up a needed
             data structure lexicalState.orderedStateSet, which is used to output
             the jjnextStates vector. --]
-       [#var index = lexicalState.nfaData.getStartIndex(nextState)]
+       [#var index = lexicalState.getStartIndex(nextState)]
        addStates(${index}, ${nextState.epsilonMoveCount});
    [/#if]
          }
@@ -252,7 +252,7 @@
                     if (${nfaState.moveMethodName}(curChar))
    [/#if]
    [#if !nextState?is_null&&nextState.epsilonMoveCount>0]
-       [#var index = lexicalState.nfaData.getStartIndex(nextState)]
+       [#var index = lexicalState.getStartIndex(nextState)]
        addStates(${index}, ${nextState.epsilonMoveCount});
    [/#if]
        break;
