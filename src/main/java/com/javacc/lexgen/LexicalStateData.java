@@ -33,19 +33,24 @@ import java.util.*;
 
 import com.javacc.Grammar;
 import com.javacc.parsegen.RegularExpression;
+import com.javacc.parser.Token;
 import com.javacc.parser.tree.CodeBlock;
 import com.javacc.parser.tree.RegexpChoice;
 import com.javacc.parser.tree.RegexpSpec;
 import com.javacc.parser.tree.RegexpStringLiteral;
 import com.javacc.parser.tree.TokenProduction;
+import static java.lang.Math.min; 
 
 public class LexicalStateData {
 
     private Grammar grammar;
     private LexerData lexerData;
     private String name;
-    private DfaData dfaData;
-    private NfaState initialState;  
+    private NfaState initialState;
+    private BitSet singlesToSkipSet = new BitSet();
+    private BitSet subStringSet = new BitSet();
+    private BitSet subStringAtPosSet = new BitSet();
+ 
 
     Map<Integer, NfaState> indexedAllStates = new HashMap<>();
     Set<NfaState> allStates = new HashSet<>();
@@ -58,10 +63,17 @@ public class LexicalStateData {
 
     private HashSet<RegularExpression> regularExpressions = new HashSet<>();
 
+    // This is a list where the index corresponds to the offset
+    // into the string literal and the items are maps of integers,
+    // codepoints actually, to KindInfo objects. The KindInfo 
+    // objects represent the set of tokens that can still be matched by
+    // that character (i.e. codepoint) and also the ones that can be
+    // terminated. (Accepting state in the Aho et al. terminology)
+    private List<Map<Integer, KindInfo>> stringLiteralTables = new ArrayList<>();
+
     public LexicalStateData(Grammar grammar, String name) {
         this.grammar = grammar;
         this.lexerData = grammar.getLexerData();
-        this.dfaData = new DfaData(this);
         this.name = name;
         this.initialState = new NfaState(this);
     }
@@ -74,7 +86,14 @@ public class LexicalStateData {
 
     public String getName() {return name;}
 
-    public DfaData getDfaData() {return dfaData;}
+    public long getSinglesToSkip(int byteNum) {
+        long[] ll = singlesToSkipSet.toLongArray();
+        return ll.length > byteNum ? ll[byteNum] : 0L;
+    }
+
+    public boolean getHasSinglesToSkip() {
+        return singlesToSkipSet.cardinality()>0;
+    }
 
     public int getInitialStateIndex() {
         return getStartStateIndex(initialState.epsilonMoves);
@@ -102,6 +121,19 @@ public class LexicalStateData {
         for (RegularExpression re: regularExpressions) {
             if (re instanceof RegexpStringLiteral  && re.getImage().length()>0) 
                 result = Math.max(result,re.getOrdinal()+1);
+        }
+        return result;
+    }
+
+    public int getMaxStringLengthForActive(int byteNum){
+        int result = 0;
+        int leftBound = byteNum*64;
+        int rightBound = min(grammar.getLexerData().getTokenCount(), leftBound+64);
+        for (int i = leftBound; i< rightBound; i++) {
+            String image = grammar.getLexerData().getRegularExpression(i).getImage();
+            if (image !=null && image.length() > result) {
+                result = image.length();
+            }
         }
         return result;
     }
@@ -141,9 +173,19 @@ public class LexicalStateData {
             choices.addAll(processTokenProduction(tp, isFirst));
             isFirst = false;
         }
-        dfaData.generateData();
-        generateData();
+        generateDfaData();
+        generateNfaData();
         return choices;
+    }
+
+    void generateDfaData() {
+        fillSubString();
+        for (int i = 0; i < getMaxStringLength(); i++) {
+            Map<Integer, KindInfo> table = getStringLiteralTables().get(i);
+            for (Integer key : table.keySet()) {
+                generateDfaCase(key, table.get(key), i);
+            }
+        }
     }
 
     List<RegexpChoice> processTokenProduction(TokenProduction tp, boolean isFirst) {
@@ -158,7 +200,7 @@ public class LexicalStateData {
             }
             if (currentRegexp instanceof RegexpStringLiteral
                     && !((RegexpStringLiteral) currentRegexp).getImage().equals("")) {
-                dfaData.generate((RegexpStringLiteral) currentRegexp);
+                generate((RegexpStringLiteral) currentRegexp);
             } else {
                 if (currentRegexp instanceof RegexpChoice) {
                     choices.add((RegexpChoice) currentRegexp);
@@ -205,7 +247,7 @@ public class LexicalStateData {
     }
 
 
-    void generateData() {
+    void generateNfaData() {
         for (NfaState state : allStates) {
             state.doEpsilonClosure();
         }
@@ -278,5 +320,84 @@ public class LexicalStateData {
             lexerData.getOrderedStateSets().add(state.epsilonMoves);
         }
         return result;
+    }
+
+    void fillSubString() {
+        int maxStringIndex = getMaxStringIndex();
+        for (int i = 0; i < maxStringIndex; i++) {
+            RegularExpression re = grammar.getLexerData().getRegularExpression(i);
+            subStringSet.clear(i);
+            if (re.getImage() == null || !containsRegularExpression(re)) {
+                continue;
+            }
+            subStringSet.set(i);
+            subStringAtPosSet.set(re.getImage().length() - 1);
+        }
+    }
+
+    public List<Map<Integer, KindInfo>> getStringLiteralTables() {
+        return stringLiteralTables;
+    }
+
+    public boolean generateDfaCase(int ch, KindInfo info, int index) {
+        int maxStringIndex = getMaxStringIndex();
+        for (int kind = 0; kind < maxStringIndex; kind++) {
+        	if (index == 0 && ch < 128 && info.getFinalKindCnt() !=0
+        			&& (getNumNfaStates()==0 || !canStartNfaUsing(ch))) {
+        			if (info.isFinalKind(kind) && !subStringSet.get(kind)) {
+                        if (grammar.getLexerData().getSkipSet().get(kind)
+        				        && !grammar.getLexerData().getSpecialSet().get(kind)
+        						&& grammar.getLexerData().getRegularExpression(kind).getCodeSnippet() == null
+        						&& grammar.getLexerData().getRegularExpression(kind).getNewLexicalState() == null) {
+                            singlesToSkipSet.set(ch);
+                            //REVISIT
+        					if (grammar.isIgnoreCase()) {
+                                singlesToSkipSet.set(Character.toUpperCase(ch));
+                                singlesToSkipSet.set(Character.toLowerCase(ch));
+        					}
+        					return false;
+        				}
+        			}
+        	}
+        }
+        return true;
+    }
+
+    void generate(final RegexpStringLiteral rsLiteral) {
+        final int ordinal = rsLiteral.getOrdinal();
+        final String stringLiteral = rsLiteral.getImage();
+        final int stringLength = stringLiteral.length();
+        while (stringLiteralTables.size() < stringLength) {
+            stringLiteralTables.add(new HashMap<>());
+        }
+        for (int i = 0; i < stringLength; i++) {
+            int c = stringLiteral.codePointAt(i);
+            if (c > 0xFFFF) i++;
+            if (grammar.isIgnoreCase()) {
+               c = Character.toLowerCase(c);
+            }
+            Map<Integer, KindInfo> table = stringLiteralTables.get(i);
+            if (!table.containsKey(c)) {
+                table.put(c, new KindInfo(grammar));
+            }
+            KindInfo info = table.get(c);
+            if (!grammar.isIgnoreCase() && rsLiteral.getIgnoreCase()) {
+                table.put(Character.toLowerCase(c), info);
+                table.put(Character.toLowerCase(c), info);
+            }
+            if (i + 1 == stringLength) {
+                info.insertFinalKind(ordinal);
+            }
+            else {
+                info.insertValidKind(ordinal);
+            }
+        }
+    }
+
+    // This method is just a temporary kludge
+    // prior to a more complete refactoring.
+    // It is only called from the DfaCode.java.ftl template.
+    public KindInfo getKindInfo(Map<Integer, KindInfo> table, int key) {
+        return table.get(key);
     }
 }
