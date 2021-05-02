@@ -268,7 +268,86 @@
         return t;
     }
 
-[@OutputNfaStateMoves/]
+  private final int[] jjstateSet = new int[${2*lexerData.stateSetSize}];
+  private int jjnewStateCnt;
+  private BitSet checkedStates = new BitSet();
+
+  private void addState(int state) {
+        if (!checkedStates.get(state)) {
+          jjstateSet[jjnewStateCnt++] = state;
+          checkedStates.set(state);
+        }
+  }
+  
+  private void addStates(int start, int count) {
+      for (int i=0; i<count; i++) {
+          addState(jjnextStates[start+i]);
+      }
+  }
+  
+  private int jjStopAtPos(int pos, int kind) {
+        jjmatchedKind = kind;
+        jjmatchedPos = pos;
+        if (trace_enabled) LOGGER.info("   No more string literal token matches are possible.");
+        if (trace_enabled) LOGGER.info("   Currently matched the first " + (jjmatchedPos + 1) 
+                          + " characters as a " + tokenImage[jjmatchedKind] + " token.");
+        return pos + 1;
+  }
+  [#var needNextStep = false]
+
+  [#list lexerData.lexicalStates as lexicalState]
+      [#list lexicalState.allStates as nfaState]
+        [#if nfaState.moveRanges?size < 16]  
+          private static final boolean ${nfaState.moveMethodName}(int ch) {
+              [#var left, right]
+              [#list nfaState.moveRanges as char]
+                [#if char_index % 2 = 0]
+                    [#set left = char]
+                [#else]
+                    [#set right = char]
+                    [#if left = right]
+                    if (ch == ${left}) return true;
+                    [#else]
+                      [#if left >0 ]
+                    if (ch < ${left}) return false;
+                      [/#if]
+                    if (ch <= ${right}) return true;
+                    [/#if]
+                [/#if]
+              [/#list]
+                    return false;
+          }
+          [#else]
+          [#set needNextStep = true]
+          [#var arrayName = nfaState.movesArrayName]
+
+          static private int[] ${arrayName};
+
+          static private void ${arrayName}_populate() {
+              ${arrayName} = new int[${nfaState.moveRanges?size}];
+              [#list nfaState.moveRanges as char]
+                ${arrayName}[${char_index}] = ${char};
+              [/#list]
+          }
+
+          private static final boolean ${nfaState.moveMethodName}(int ch) {
+              int idx = Arrays.binarySearch(${arrayName}, ch);
+              return idx>=0 || idx%2==0;
+          }
+          [/#if]
+      [/#list]
+  [/#list]
+    [#if needNextStep]
+    static {
+      [#list lexerData.lexicalStates as lexicalState]
+      [#list lexicalState.allStates as nfaState]
+        [#if nfaState.moveRanges?size >= 16]
+          ${nfaState.movesArrayName}_populate();
+        [/#if]
+        [/#list]
+      [/#list]
+    }
+    [/#if]
 
 [#list lexerData.lexicalStates as lexicalState]
    [@DumpDfaCode lexicalState/]
@@ -289,94 +368,12 @@
 
 };
 
-[#macro OutputNfaStateMoves]  
-    private final int[] jjstateSet = new int[${2*lexerData.stateSetSize}];
-    private int jjnewStateCnt;
-    private BitSet checkedStates = new BitSet();
-
-    private void addState(int state) {
-         if (!checkedStates.get(state)) {
-            jjstateSet[jjnewStateCnt++] = state;
-            checkedStates.set(state);
-         }
-    }
-    
-    private void addStates(int start, int count) {
-        for (int i=0; i<count; i++) {
-           addState(jjnextStates[start+i]);
-        }
-    }
-   
-    private int jjStopAtPos(int pos, int kind) {
-         jjmatchedKind = kind;
-         jjmatchedPos = pos;
-         if (trace_enabled) LOGGER.info("   No more string literal token matches are possible.");
-         if (trace_enabled) LOGGER.info("   Currently matched the first " + (jjmatchedPos + 1) 
-                            + " characters as a " + tokenImage[jjmatchedKind] + " token.");
-         return pos + 1;
-    }
-    [#var needNextStep = false]
-
-   [#list lexerData.lexicalStates as lexicalState]
-       [#list lexicalState.allStates as nfaState]
-          [#if nfaState.moveRanges?size < 16]  
-            private static final boolean ${nfaState.moveMethodName}(int ch) {
-               [#var left, right]
-               [#list nfaState.moveRanges as char]
-                  [#if char_index % 2 = 0]
-                     [#set left = char]
-                  [#else]
-                     [#set right = char]
-                     [#if left = right]
-                     if (ch == ${left}) return true;
-                     [#else]
-                       [#if left >0 ]
-                     if (ch < ${left}) return false;
-                       [/#if]
-                     if (ch <= ${right}) return true;
-                     [/#if]
-                  [/#if]
-               [/#list]
-                     return false;
-            }
-           [#else]
-            [#set needNextStep = true]
-            [#var arrayName = nfaState.movesArrayName]
-
-            static private int[] ${arrayName};
-
-            static private void ${arrayName}_populate() {
-               ${arrayName} = new int[${nfaState.moveRanges?size}];
-               [#list nfaState.moveRanges as char]
-                  ${arrayName}[${char_index}] = ${char};
-               [/#list]
-            }
-
-            private static final boolean ${nfaState.moveMethodName}(int ch) {
-               int idx = Arrays.binarySearch(${arrayName}, ch);
-               return idx>=0 || idx%2==0;
-            }
-           [/#if]
-       [/#list]
-   [/#list]
-     [#if needNextStep]
-     static {
-       [#list lexerData.lexicalStates as lexicalState]
-        [#list lexicalState.allStates as nfaState]
-          [#if nfaState.moveRanges?size >= 16]
-            ${nfaState.movesArrayName}_populate();
-          [/#if]
-         [/#list]
-       [/#list]
-     }
-     [/#if]
-[/#macro]
 
 [#macro DumpMoveNfa lexicalState]
   [#var hasNfa = lexicalState.numNfaStates>0]
     private int jjMoveNfa_${lexicalState.name}(int startState, int curPos) {
     [#if !hasNfa]
-        return curPos;
+        return curPos+1;
     }
        [#return]
     [/#if]
@@ -516,11 +513,7 @@
   [#var hasNfa = lexicalState.numNfaStates>0]
   [#if maxStringLength = 0]
     private int jjMoveStringLiteralDfa0_${lexicalState.name}() {
-    [#if hasNfa]
         return jjMoveNfa_${lexicalState.name}(${initState}, 0);
-    [#else]
-        return 1;        
-    [/#if]
     }
     [#return]
   [/#if]
@@ -554,22 +547,14 @@
            [/#if]
          [/#list]
          [/@ArgsList] == 0L)
-         [#if hasNfa]
-            return jjMoveNfa_${lexicalState.name}(${initState}, ${table_index-1});
-         [#else]
-            return ${table_index};
-         [/#if]   
+         return jjMoveNfa_${lexicalState.name}(${initState}, ${table_index-1});
       [/#if]
        int retval = input_stream.readChar();
        if (retval >=0) {
            curChar = retval;
        }
        else  {
-         [#if hasNfa]
-           return jjMoveNfa_${lexicalState.name}(${initState}, ${table_index-1}); 
-         [#else]
-           return ${table_index};
-         [/#if]
+         return jjMoveNfa_${lexicalState.name}(${initState}, ${table_index-1}); 
        }
     [/#if]
     [#if !first]
@@ -634,11 +619,7 @@
 	           [/@ArgsList];
 	      [#else][#-- a very special case--]
 	        [#if table_index = 0]
-	           [#if hasNfa]
 	           return jjMoveNfa_${lexicalState.name}(${initState}, 0);
-	           [#else]
-	           return 1;
-	           [/#if]
 	        [#elseif table_index != 0][#-- No more str literals to look for --]
 	           break;
 	           [#set startNfaNeeded = true]
@@ -663,11 +644,7 @@
       }
     [#if table_index != 0]
        [#if startNfaNeeded]
-          [#if hasNfa]
-             return jjMoveNfa_${lexicalState.name}(${initState}, ${table_index});
-          [#else]
-             return ${table_index+1};
-          [/#if]        
+          return jjMoveNfa_${lexicalState.name}(${initState}, ${table_index});
        [/#if]
     [/#if]
    }
@@ -705,7 +682,6 @@
    is just one argument per line. The macro takes care of 
    commas and the opening and closing parentheses.  
 --]   
-
 [#macro ArgsList input="" delimiter=","]
    [#if input?length = 0]
      [#set input]
