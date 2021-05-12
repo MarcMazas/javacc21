@@ -32,7 +32,6 @@ public class JLex {
       for (File file : files) {
           try {
               numTokens+=tokenizeFile(file);
-	      FileLineMap.clearFileLineMapCache();
           } 
           catch (Exception e) {
               System.err.println("Error processing file: " + file);
