@@ -116,10 +116,6 @@ public class NfaState {
             if (type == null || (state.type != null && state.type.getOrdinal() < type.getOrdinal())) {
                 type = state.type;
             } 
-            for (NfaState otherState : state.epsilonMoves) {
-                addEpsilonMove(otherState);
-                otherState.doEpsilonClosure();
-            }
         }
         addEpsilonMove(this);
         epsilonMoves.removeIf(state->state.moveRanges.isEmpty());
